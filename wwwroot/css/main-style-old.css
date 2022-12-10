@@ -1,0 +1,20 @@
+.code-wrapper {
+	display: inline;
+	zoom: 1;
+	padding-top: 15px;
+}
+
+.logo-wrapper {
+	text-align: center;
+	position: static;
+}
+
+.logo {
+	position: static;
+	margin-top: 60px;
+}
+
+.copy-button-wrapper {
+	display: inline;
+	zoom: 1;
+}

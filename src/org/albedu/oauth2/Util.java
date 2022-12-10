@@ -100,6 +100,24 @@ public class Util {
 		return response;
 	}
 
+	public static Map<String, String> queryToMap(String query) {
+		if (query == null) {
+			return new HashMap<String, String>();
+		}
+				
+		Map<String, String> result = new HashMap<String, String>();
+		for (String param : query.split("&")) {
+			String[] entry = param.split("=");
+			if (entry.length > 1) {
+				result.put(entry[0], entry[1]);
+			} else {
+				result.put(entry[0], "");
+			}
+		}
+		
+		return result;
+	}
+	
 	private static final String getPostDataString(HashMap<String, String> params) throws UnsupportedEncodingException {
 		StringBuilder result = new StringBuilder();
 		boolean first = true;

@@ -109,7 +109,7 @@ public class Base64ToTextPanel extends JPanel implements ActionListener {
 		return taBase64String.getText().trim();
 	}
 
-	public void setTaBase64String(String base64String) {
+	public void setBase64String(String base64String) {
 		this.taBase64String.setText(base64String);
 	}
 }

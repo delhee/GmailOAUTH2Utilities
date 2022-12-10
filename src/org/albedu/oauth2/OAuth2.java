@@ -71,7 +71,8 @@ public class OAuth2 {
 	private static final String GOOGLE_ACCOUNTS_BASE_URL = "https://accounts.google.com";
 
 	// Hard-coded dummy redirect URI for non-web apps.
-	private static final String REDIRECT_URI = "urn:ietf:wg:oauth:2.0:oob";
+	//private static final String REDIRECT_URI = "urn:ietf:wg:oauth:2.0:oob";
+	//private static final String REDIRECT_URI = "http://127.0.0.1:8011";
 
 	private static final String OTP_KEY_GENERATE_OAUTH2_TOKEN = "generate_oauth2_token";
 	private static final String OTP_KEY_GENERATE_OAUTH2_STRING = "generate_oauth2_string";
@@ -84,6 +85,7 @@ public class OAuth2 {
 	private static final String OTP_KEY_TEST_SMTP_AUTH = "test_smtp_authentication";
 	private static final String OTP_KEY_USER = "user";
 	private static final String OTP_KEY_QUIET = "quiet";
+	private static final String OTP_KEY_REDIRECT_URI = "redirect_uri";
 
 	private Options setOptions() {
 		Options options = new Options();
@@ -99,6 +101,7 @@ public class OAuth2 {
 		Option option9 = new Option(null, OTP_KEY_TEST_SMTP_AUTH, false, "attempts to authenticate to SMTP");
 		Option option10 = new Option(null, OTP_KEY_USER, true, "email address of user whose account is being accessed");
 		Option option11 = new Option(null, OTP_KEY_QUIET, false, "Omit verbose descriptions and only print machine-readable outputs.");
+		Option option12 = new Option(null, OTP_KEY_REDIRECT_URI, true, "URL to which verification code information is redirected");
 
 		options.addOption(option1);
 		options.addOption(option2);
@@ -111,6 +114,7 @@ public class OAuth2 {
 		options.addOption(option9);
 		options.addOption(option10);
 		options.addOption(option11);
+		options.addOption(option12);
 
 		return options;
 	}
@@ -165,7 +169,7 @@ public class OAuth2 {
 		return formattedParamString;
 	}
 
-	public String generatePermissionUrl(String clientId, String scope) {
+	public String generatePermissionUrl(String clientId, String scope, String redirectURI) {
 		/**
 		 * Generates the URL for authorizing access. 
 		 * 
@@ -177,6 +181,7 @@ public class OAuth2 {
 		 * Args:
 		 *   client_id: Client ID obtained by registering your app. 
 		 *   scope: scope for access token, e.g. 'https://mail.google.com' 
+		 *   redirectURI: URL to which verification code information is redirected, e.g. http://127.0.0.1:14400
 		 * 
 		 * Returns: 
 		 *   A URL that the user should visit in their browser.
@@ -189,28 +194,24 @@ public class OAuth2 {
 
 		Properties params = new Properties();
 		params.setProperty("client_id", clientId);
-		params.setProperty("redirect_uri", REDIRECT_URI);
+		params.setProperty("redirect_uri", redirectURI);
 		params.setProperty("scope", scope);
 		params.setProperty("response_type", "code");
 
 		return String.format("%s?%s", accountsUrl("o/oauth2/auth"), formatUrlParams(params));
 	}
 	
-	public JSONObject authorizeTokens(String clientId, String clientSecret, String authorizationCode) {
+	public JSONObject authorizeTokens(String clientId, String clientSecret, String authorizationCode, String redirectURI) throws Exception {
         HashMap<String, String> postDataParams = new HashMap<String, String>();
         postDataParams.put("client_id", clientId);
         postDataParams.put("client_secret", clientSecret);
         postDataParams.put("code", authorizationCode);
-        postDataParams.put("redirect_uri", REDIRECT_URI);
+        postDataParams.put("redirect_uri", redirectURI);
         postDataParams.put("grant_type", "authorization_code");
         	
         JSONObject response = null;
         
-        try { 
-        	response = Util.urlOpen(accountsUrl("o/oauth2/token"), postDataParams);
-		} catch (Exception e) {
-			logger.error(Util.stackTraceToString(e));
-		}
+        response = Util.urlOpen(accountsUrl("o/oauth2/token"), postDataParams);
         
 		return response;
 	}
@@ -291,8 +292,6 @@ public class OAuth2 {
 		 *   user: The Gmail username (full email address)
 		 *   auth_string: A valid OAuth2 string, as returned by 
 		 *   GenerateOAuth2String
-		 *       Must not be base64-encoded, since imaplib does its 
-		 *       own base64-encoding.
 		 *     
 		 */
 		
@@ -334,7 +333,7 @@ public class OAuth2 {
 		 * 
 		 * Args:
 		 *   user: The Gmail username (full email address)
-		 *   auth_string: A valid OAuth2 string, not base64-encoded, as returned by 
+		 *   auth_string: A valid OAuth2 string, as returned by 
 		 *       GenerateOAuth2String.
 		 *   
 		 */		
@@ -409,6 +408,8 @@ public class OAuth2 {
 
 		CommandLineParser parser = null;
 		HelpFormatter formatter = null;
+		
+		RedirectResponseHandler objRedirectResponseHandler = null;
 
 		if (args != null && args.length > 0) {
 
@@ -448,15 +449,39 @@ public class OAuth2 {
 					JSONObject response = objOAuth2.refreshToken(clientIdValue, clientSecretValue, refreshTokenValue);
 
 					if (response != null) {
-						if (argsList.contains("--" + OTP_KEY_QUIET)) {
-							logger.debug(response.getString("access_token"));
-							System.out.println(response.getString("access_token"));
-						} else {
-							logger.debug("Access Token: " + response.getString("access_token"));
-							logger.debug("Access Token Expiration Seconds: " + response.getInt("expires_in"));
+						String accessToken = "";
+						
+						try {
+							accessToken = response.getString("access_token");
+						} catch (Exception e) {
+							logger.warn("Failed to get accessToken from JSON. ");
+							logger.warn(Util.stackTraceToString(e));
 							
-							System.out.println("Access Token: " + response.getString("access_token"));
-							System.out.println("Access Token Expiration Seconds: " + response.getInt("expires_in"));
+							System.out.println("Failed to get accessToken from JSON. ");
+							e.printStackTrace();
+						}
+						
+						if (argsList.contains("--" + OTP_KEY_QUIET)) {
+							logger.debug(accessToken);
+							System.out.println(accessToken);
+						} else {
+							int accessTokenLifeSpanInSeconds = 0;
+							
+							try {
+								accessTokenLifeSpanInSeconds = response.getInt("expires_in");
+							} catch (Exception e) {
+								logger.warn("Failed to get accessTokenLifeSpanInSeconds from JSON. ");
+								logger.warn(Util.stackTraceToString(e));
+								
+								System.out.println("Failed to get accessTokenLifeSpanInSeconds from JSON. ");
+								e.printStackTrace();
+							}
+							
+							logger.debug("Access Token: " + accessToken);
+							logger.debug("Access Token Expiration Seconds: " + accessTokenLifeSpanInSeconds);
+							
+							System.out.println("Access Token: " + accessToken);
+							System.out.println("Access Token Expiration Seconds: " + accessTokenLifeSpanInSeconds);
 						}
 					} else {
 						logger.error("Error implementing authorizeTokens(), response is null");
@@ -509,12 +534,17 @@ public class OAuth2 {
 					String clientIdValue = command.getOptionValue(OTP_KEY_CLIENT_ID);
 					String clientSecretValue = command.getOptionValue(OTP_KEY_CLIENT_SECRET);
 					String scopeValue = command.getOptionValue(OTP_KEY_SCOPE);
+					String redirectURI = command.getOptionValue(OTP_KEY_REDIRECT_URI);
 
 					logger.debug("clientIdValue: " + clientIdValue);
 					logger.debug("clientSecretValue: " + clientSecretValue);
 					logger.debug("scopeValue: " + scopeValue);
+					logger.debug("redirectURI: " + redirectURI);
 					
-					String permissionUrl = objOAuth2.generatePermissionUrl(clientIdValue, scopeValue);
+					objRedirectResponseHandler = RedirectResponseHandler.getInstance();
+					objRedirectResponseHandler.startServer(redirectURI);
+					
+					String permissionUrl = objOAuth2.generatePermissionUrl(clientIdValue, scopeValue, redirectURI);
 
 					logger.debug("To authorize token, visit this url and follow the directions: ");
 					logger.debug(permissionUrl);
@@ -529,21 +559,58 @@ public class OAuth2 {
 
 					logger.debug("verificationCode input: " + verificationCode);
 					
-					JSONObject response = objOAuth2.authorizeTokens(clientIdValue, clientSecretValue, verificationCode);
+					JSONObject response = objOAuth2.authorizeTokens(clientIdValue, clientSecretValue, verificationCode, redirectURI);
 					
 					if (response != null) {
-						logger.debug("Refresh Token: " + response.getString("refresh_token"));
-						logger.debug("Access Token: " + response.getString("access_token"));
-						logger.debug("Access Token Expiration Seconds: " + response.getInt("expires_in"));
+						String refreshToken = "";
 						
-						System.out.println("Refresh Token: " + response.getString("refresh_token"));
-						System.out.println("Access Token: " + response.getString("access_token"));
-						System.out.println("Access Token Expiration Seconds: " + response.getInt("expires_in"));
+						try {
+							refreshToken = response.getString("refresh_token");
+						} catch (Exception e) {
+							logger.warn("Failed to get refreshToken from JSON. ");
+							logger.warn(Util.stackTraceToString(e));
+							
+							System.out.println("Failed to get refreshToken from JSON. ");
+							e.printStackTrace();
+						}
+						
+						String accessToken = "";
+						
+						try {
+							accessToken = response.getString("access_token");
+						} catch (Exception e) {
+							logger.warn("Failed to get accessToken from JSON. ");
+							logger.warn(Util.stackTraceToString(e));
+							
+							System.out.println("Failed to get accessToken from JSON. ");
+							e.printStackTrace();
+						}
+						
+						int accessTokenLifeSpanInSeconds = 0;
+						
+						try {
+							accessTokenLifeSpanInSeconds = response.getInt("expires_in");
+						} catch (Exception e) {
+							logger.warn("Failed to get accessTokenLifeSpanInSeconds from JSON. ");
+							logger.warn(Util.stackTraceToString(e));
+							
+							System.out.println("Failed to get accessTokenLifeSpanInSeconds from JSON. ");
+							e.printStackTrace();
+						}
+						
+						logger.debug("Refresh Token: " + refreshToken);
+						logger.debug("Access Token: " + accessToken);
+						logger.debug("Access Token Expiration Seconds: " + accessTokenLifeSpanInSeconds);
+						
+						System.out.println("Refresh Token: " + refreshToken);
+						System.out.println("Access Token: " + accessToken);
+						System.out.println("Access Token Expiration Seconds: " + accessTokenLifeSpanInSeconds);
 					} else {
 						logger.error("Error implementing authorizeTokens(), response is null");
 					}
 
 					verificationCodeScanner.close();
+					objRedirectResponseHandler.stopServer();
 				} else if (argsList.contains(OTP_KEY_TEST_IMAP_AUTH)) {
 					String[] requiredOptions = new String[2];
 					requiredOptions[0] = OTP_KEY_USER;
@@ -621,6 +688,10 @@ public class OAuth2 {
 			}
 
 			formatter.printHelp(HELP_TEXT_MAX_CHAR_PER_LINE, HELP_TEXT, HELP_HEADER, options, HELP_FOOTER);
+		}
+		
+		if (objRedirectResponseHandler != null) {
+			objRedirectResponseHandler.stopServer();
 		}
 	}
 

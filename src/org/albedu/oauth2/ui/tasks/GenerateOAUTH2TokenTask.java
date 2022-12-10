@@ -15,18 +15,20 @@ public class GenerateOAUTH2TokenTask extends SwingWorker<JSONObject, Void> {
 	private String clientId;
 	private String clientSecret;
 	private String authorizationCode;
+	private String redirectURI;
 
-	public GenerateOAUTH2TokenTask(BackgroundTaskListener backgroundTaskListener, String clientId, String clientSecret, String authorizationCode) {
+	public GenerateOAUTH2TokenTask(BackgroundTaskListener backgroundTaskListener, String clientId, String clientSecret, String authorizationCode, String redirectURI) {
 		this.backgroundTaskListener = backgroundTaskListener;
 		this.clientId = clientId;
 		this.clientSecret = clientSecret;
 		this.authorizationCode = authorizationCode;
+		this.redirectURI = redirectURI;
 	}
 	
 	@Override
 	protected JSONObject doInBackground() throws Exception {
 		OAuth2 oauth2Util = new OAuth2();
-		JSONObject response = oauth2Util.authorizeTokens(this.clientId, this.clientSecret, this.authorizationCode);
+		JSONObject response = oauth2Util.authorizeTokens(this.clientId, this.clientSecret, this.authorizationCode, this.redirectURI);
 		
 		logger.debug("resp: " + (response == null ? response:response.toString()));
 		

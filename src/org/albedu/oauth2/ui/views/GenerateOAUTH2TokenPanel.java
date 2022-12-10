@@ -44,20 +44,22 @@ public class GenerateOAUTH2TokenPanel extends JPanel implements DocumentListener
 	private JButton btnContinue1;
 	private JButton btnContinue2;
 	private AuthTokenDialog authTokenDialog;
-	
+
+	private String redirectURI;
+
 	private Timer timer;
-	
+
 	private long lastExitTime;
 	private long timerOffset;
 	private long accessTokenRequestStartTime;
-	
+
 	public GenerateOAUTH2TokenPanel(long lastExitTime, long timerOffset) {
 		this.timerOffset = timerOffset;
 		this.lastExitTime = lastExitTime;
-		
+
 		this.oauth2Util = new OAuth2();
 		setLayout(null);
-		
+
 		JLabel lClientId = new JLabel("Client Id:");
 		lClientId.setBounds(50, 20, 130, 40);
 
@@ -89,7 +91,7 @@ public class GenerateOAUTH2TokenPanel extends JPanel implements DocumentListener
 
 		JScrollPane scrollScope = new JScrollPane(this.taScope);
 		scrollScope.setBounds(175, 140, 250, 40);
-		
+
 		JLabel lAuthorizationCode = new JLabel("Verification Code:");
 		lAuthorizationCode.setBounds(50, 200, 130, 40);
 
@@ -114,7 +116,7 @@ public class GenerateOAUTH2TokenPanel extends JPanel implements DocumentListener
 		this.btnCopyAccessToken.addActionListener(this);
 		this.btnCopyAccessToken.setEnabled(true);
 		Util.registerEnterKeyAction(this.btnCopyAccessToken);
-		
+
 		JLabel lRefreshToken = new JLabel("Refresh Token:");
 		lRefreshToken.setBounds(50, 320, 130, 40);
 
@@ -128,7 +130,7 @@ public class GenerateOAUTH2TokenPanel extends JPanel implements DocumentListener
 		this.btnCopyRefreshToken.addActionListener(this);
 		this.btnCopyRefreshToken.setEnabled(true);
 		Util.registerEnterKeyAction(this.btnCopyRefreshToken);
-		
+
 		JLabel lAccessTokenExpirationSeconds = new JLabel("<html>Access Token<br> Expiration Seconds:</html>");
 		lAccessTokenExpirationSeconds.setBounds(50, 367, 120, 80);
 
@@ -148,7 +150,7 @@ public class GenerateOAUTH2TokenPanel extends JPanel implements DocumentListener
 		this.btnContinue2.addActionListener(this);
 		this.btnContinue2.setEnabled(false);
 		Util.registerEnterKeyAction(this.btnContinue2);
-				
+
 		add(lClientId);
 		add(scrollClientId);
 		add(lClientSecret);
@@ -170,7 +172,8 @@ public class GenerateOAUTH2TokenPanel extends JPanel implements DocumentListener
 	}
 
 	@Override
-	public void changedUpdate(DocumentEvent arg0) {}
+	public void changedUpdate(DocumentEvent arg0) {
+	}
 
 	@Override
 	public void insertUpdate(DocumentEvent arg0) {
@@ -185,7 +188,7 @@ public class GenerateOAUTH2TokenPanel extends JPanel implements DocumentListener
 	@Override
 	public void actionPerformed(ActionEvent arg0) {
 		Util.buttonClickDelay(logger);
-		
+
 		if (arg0.getSource().equals(this.btnContinue1)) {
 			logger.info("btnContinue1 clicked. ");
 
@@ -195,15 +198,15 @@ public class GenerateOAUTH2TokenPanel extends JPanel implements DocumentListener
 			logger.debug("clientId: " + clientId);
 			logger.debug("scope: " + scope);
 
-			String permissionUrl = this.oauth2Util.generatePermissionUrl(clientId, scope);
+			String permissionUrl = this.oauth2Util.generatePermissionUrl(clientId, scope, this.redirectURI);
 
 			logger.debug("permissionUrl: " + permissionUrl);
-			
+
 			if (this.authTokenDialog == null) {
 				JFrame rootFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
 				this.authTokenDialog = new AuthTokenDialog(rootFrame);
 			}
-			
+
 			this.authTokenDialog.setPermissionUrl(permissionUrl);
 			this.authTokenDialog.setVisible(true);
 		} else if (arg0.getSource().equals(this.btnContinue2)) {
@@ -216,67 +219,98 @@ public class GenerateOAUTH2TokenPanel extends JPanel implements DocumentListener
 			logger.debug("clientId: " + clientId);
 			logger.debug("clientSecret: " + clientSecret);
 			logger.debug("authorizationCode: " + authorizationCode);
-			
+
 			this.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 			this.btnContinue2.setEnabled(false);
 			this.taClientId.setEnabled(false);
 			this.taClientSecret.setEnabled(false);
 			this.taAuthorizationCode.setEnabled(false);
 			this.taScope.setEnabled(false);
-			
-			GenerateOAUTH2TokenTask generateOAUTH2TokenTask = new GenerateOAUTH2TokenTask(this, clientId, clientSecret, authorizationCode);
+
+			GenerateOAUTH2TokenTask generateOAUTH2TokenTask = new GenerateOAUTH2TokenTask(this, clientId, clientSecret, authorizationCode, this.redirectURI);
 			generateOAUTH2TokenTask.execute();
-			
+
 			this.accessTokenRequestStartTime = (new Date()).getTime();
 		} else if (arg0.getSource().equals(this.btnCopyAccessToken)) {
 			logger.info("btnCopyAccessToken clicked. ");
-			
+
 			String accessToken = this.lAccessTokenValue.getText();
-			
+
 			if (accessToken != null) {
 				accessToken = accessToken.trim();
 			}
-			
-			if(accessToken != null && !accessToken.isEmpty()) {
+
+			if (accessToken != null && !accessToken.isEmpty()) {
 				Util.copyToClipboard(this.lAccessTokenValue.getText());
 			}
 		} else if (arg0.getSource().equals(this.btnCopyRefreshToken)) {
 			logger.info("btnCopyRefreshToken clicked. ");
-			
+
 			String refreshToken = this.lRefreshTokenValue.getText();
-			
+
 			if (refreshToken != null) {
 				refreshToken = refreshToken.trim();
 			}
-			
-			if(refreshToken != null && !refreshToken.isEmpty()) {
+
+			if (refreshToken != null && !refreshToken.isEmpty()) {
 				Util.copyToClipboard(this.lRefreshTokenValue.getText());
 			}
 		}
 	}
-	
+
 	@Override
 	public void updateUI(Object source, Object output) {
 		if (source instanceof GenerateOAUTH2TokenTask) {
 			JSONObject response = (JSONObject) output;
-			
-			if(response != null) {
-				logger.debug("Refresh Token: " + response.getString("refresh_token"));
-				logger.debug("Access Token: " + response.getString("access_token"));
-				logger.debug("Access Token Expiration Seconds: " + response.getInt("expires_in"));
-				
-				this.lAccessTokenValue.setText(response.getString("access_token"));
-				this.lRefreshTokenValue.setText(response.getString("refresh_token"));
-				
-				long accessTokenRequestTimeElapsedEstimated = ((new Date().getTime()) - this.accessTokenRequestStartTime) / 1000;
-				
-				startCountdownTimer(response.getInt("expires_in") - ((int) accessTokenRequestTimeElapsedEstimated));
-				
-				logger.info("accessTokenRequestTimeElapsedEstimated: " + accessTokenRequestTimeElapsedEstimated);
+
+			if (response != null) {
+				String refreshToken = "";
+
+				try {
+					refreshToken = response.getString("refresh_token");
+				} catch (Exception e) {
+					logger.warn("Failed to get refreshToken from JSON. ");
+					logger.warn(Util.stackTraceToString(e));
+				}
+
+				String accessToken = "";
+
+				try {
+					accessToken = response.getString("access_token");
+				} catch (Exception e) {
+					logger.warn("Failed to get accessToken from JSON. ");
+					logger.warn(Util.stackTraceToString(e));
+				}
+
+				int accessTokenLifeSpanInSeconds = 0;
+
+				try {
+					accessTokenLifeSpanInSeconds = response.getInt("expires_in");
+				} catch (Exception e) {
+					logger.warn("Failed to get accessTokenLifeSpanInSeconds from JSON. ");
+					logger.warn(Util.stackTraceToString(e));
+				}
+
+				logger.debug("Refresh Token: " + refreshToken);
+				logger.debug("Access Token: " + accessToken);
+				logger.debug("Access Token Expiration Seconds: " + accessTokenLifeSpanInSeconds);
+
+				this.lRefreshTokenValue.setText(refreshToken);
+				this.lAccessTokenValue.setText(accessToken);
+
+				if (accessTokenLifeSpanInSeconds == 0) {
+					startCountdownTimer(0);
+				} else {
+					long accessTokenRequestTimeElapsedEstimated = ((new Date().getTime()) - this.accessTokenRequestStartTime) / 1000;
+
+					logger.info("accessTokenRequestTimeElapsedEstimated: " + accessTokenRequestTimeElapsedEstimated);
+
+					startCountdownTimer(accessTokenLifeSpanInSeconds - ((int) accessTokenRequestTimeElapsedEstimated));
+				}
 			} else {
 				logger.error("Error implementing authorizeTokens(), response is null");
 			}
-			
+
 			this.setCursor(Cursor.getDefaultCursor());
 			refreshViews();
 			this.taClientId.setEnabled(true);
@@ -285,44 +319,44 @@ public class GenerateOAUTH2TokenPanel extends JPanel implements DocumentListener
 			this.taScope.setEnabled(true);
 		} else if (source instanceof CountdownTimerTask) {
 			Integer timeRemaining = (Integer) output;
-			
+
 			this.lAccessTokenExpirationSecondsValue.setText(Integer.toString(timeRemaining));
-			
-			if(timeRemaining <= 0) {
+
+			if (timeRemaining <= 0) {
 				this.timer.cancel();
 			}
 		}
 	}
-	
+
 	private void refreshViews() {
 		if (this.taClientId != null && this.taClientSecret != null && this.taAuthorizationCode != null) {
 			String clientId = this.taClientId.getText();
 			String clientSecret = this.taClientSecret.getText();
 			String authToken = this.taAuthorizationCode.getText();
-			
+
 			if (clientId != null) {
 				clientId = clientId.trim();
 			}
-			
+
 			if (clientSecret != null) {
 				clientSecret = clientSecret.trim();
 			}
-			
+
 			if (authToken != null) {
 				authToken = authToken.trim();
 			}
 
-			//logger.debug("clientId: " + clientId);
-			//logger.debug("clientSecret: " + clientSecret);
-			//logger.debug("authToken: " + authToken);
+			// logger.debug("clientId: " + clientId);
+			// logger.debug("clientSecret: " + clientSecret);
+			// logger.debug("authToken: " + authToken);
 
 			if (clientId != null && !clientId.isEmpty()) {
 				if (clientSecret != null && !clientSecret.isEmpty() && authToken != null && !authToken.isEmpty()) {
 					this.btnContinue1.setEnabled(false);
-					this.btnContinue2.setEnabled(true);					
+					this.btnContinue2.setEnabled(true);
 				} else {
 					this.btnContinue1.setEnabled(true);
-					this.btnContinue2.setEnabled(false);					
+					this.btnContinue2.setEnabled(false);
 				}
 			} else {
 				this.btnContinue1.setEnabled(false);
@@ -363,6 +397,14 @@ public class GenerateOAUTH2TokenPanel extends JPanel implements DocumentListener
 		this.taScope.setText(scope);
 	}
 
+	public String getRedirectURI() {
+		return this.redirectURI;
+	}
+
+	public void setRedirectURI(String redirectURI) {
+		this.redirectURI = redirectURI;
+	}
+
 	public String getRefreshToken() {
 		String refreshToken = lRefreshTokenValue.getText();
 
@@ -371,16 +413,16 @@ public class GenerateOAUTH2TokenPanel extends JPanel implements DocumentListener
 		} else {
 			refreshToken = "";
 		}
-		
+
 		logger.debug("getRefreshToken(): " + refreshToken);
-		
+
 		return refreshToken;
 	}
 
 	public void setRefreshToken(String refreshToken) {
 		this.lRefreshTokenValue.setText(refreshToken);
 	}
-	
+
 	public String getAccessToken() {
 		String accessToken = lAccessTokenValue.getText();
 
@@ -389,9 +431,9 @@ public class GenerateOAUTH2TokenPanel extends JPanel implements DocumentListener
 		} else {
 			accessToken = "";
 		}
-		
+
 		logger.debug("getAccessToken(): " + accessToken);
-				
+
 		return accessToken;
 	}
 
@@ -407,32 +449,32 @@ public class GenerateOAUTH2TokenPanel extends JPanel implements DocumentListener
 		if (accessTokenExpirationSeconds == null || accessTokenExpirationSeconds.isEmpty()) {
 			accessTokenExpirationSeconds = "0";
 		}
-		
+
 		long now = (new Date()).getTime();
-		
-		long timeRemaining = Long.parseLong(accessTokenExpirationSeconds) - ( now - this.lastExitTime) / 1000 - this.timerOffset;
+
+		long timeRemaining = Long.parseLong(accessTokenExpirationSeconds) - (now - this.lastExitTime) / 1000 - this.timerOffset;
 
 		logger.debug("accessTokenExpirationSeconds: " + accessTokenExpirationSeconds);
 		logger.debug("now: " + now);
 		logger.debug("lastExitTime: " + this.lastExitTime);
 		logger.debug("timeRemaining: " + timeRemaining);
-		
+
 		if (timeRemaining < 0) {
 			timeRemaining = 1;
 		}
-		
+
 		startCountdownTimer(((int) timeRemaining));
 	}
 
 	private void startCountdownTimer(int secondsRemaining) {
-		if(this.timer != null) {
+		if (this.timer != null) {
 			this.timer.cancel();
 		}
-		
+
 		this.timer = new Timer();
-		
+
 		CountdownTimerTask countdownTimer = new CountdownTimerTask(this, secondsRemaining);
-		
+
 		this.timer.schedule(countdownTimer, 0, 1000);
 	}
 }

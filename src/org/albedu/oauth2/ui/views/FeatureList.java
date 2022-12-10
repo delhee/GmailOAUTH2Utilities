@@ -14,10 +14,10 @@ public class FeatureList extends JPanel {
 	 */
 	private static final long serialVersionUID = 1L;
 	
-	private JList<String> jList;
+	private JList jList;
 
 	public FeatureList(String[] featureArray) {
-		jList = new JList<String>(featureArray);
+		jList = new JList(featureArray);
 		
 		jList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		jList.setDragEnabled(true);
@@ -28,7 +28,7 @@ public class FeatureList extends JPanel {
 		add(jList, BorderLayout.NORTH);
 	}
 	
-	public JList<String> getJList() {
+	public JList getJList() {
 		return jList;
 	}
 }
