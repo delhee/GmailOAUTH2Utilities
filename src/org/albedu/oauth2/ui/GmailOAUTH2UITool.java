@@ -77,20 +77,42 @@ public class GmailOAUTH2UITool extends JFrame implements ListSelectionListener, 
 	private String verificationCodeRedirectURI;
 	private boolean isVerificationCodeRedirectURIValid;
 
+	private final String savedInputDataFilePath;
+	
 	private final Properties appProperties;
 	private final Properties savedInputData;
 
+	private final boolean isMacOS;
+	
 	private long lastExitTime;
 	private long timerOffset;
 
 	private RedirectResponseHandler mRedirectResponseHandler = null;
 
 	public static void main(String[] args) {
+		boolean isMacOS = false;
+		
+		try {
+			isMacOS = Boolean.parseBoolean(Util.loadProperties(Constant.APP_PROPERTIES_FILE_PATH).getProperty(Constant.KEY_IS_MAC_OS));
+		} catch (IOException e) {
+			JOptionPane.showMessageDialog(null, Util.stackTraceToString(e), "", JOptionPane.ERROR_MESSAGE);
+		}
+		
+		if (isMacOS) {
+			try {
+				System.setProperty("homeDir", System.getProperty(Util.loadProperties(Constant.APP_PROPERTIES_FILE_PATH).getProperty(Constant.KEY_MAC_OS_HOME_DIR_PROPERTY_NAME)));
+			} catch (IOException e) {
+				JOptionPane.showMessageDialog(null, Util.stackTraceToString(e), "", JOptionPane.ERROR_MESSAGE);
+			}
+		}
+		
 		PropertyConfigurator.configure(Constant.LOG4J_UI_TOOL_CONFIG_FILE_PATH);
 
 		try {
 			new GmailOAUTH2UITool();
 		} catch (IOException e) {
+			JOptionPane.showConfirmDialog(null, Util.stackTraceToString(e), "", JOptionPane.ERROR_MESSAGE);
+			
 			logger.error(Util.stackTraceToString(e));
 			e.printStackTrace();
 		}
@@ -98,7 +120,28 @@ public class GmailOAUTH2UITool extends JFrame implements ListSelectionListener, 
 
 	private GmailOAUTH2UITool() throws IOException {
 		this.appProperties = Util.loadProperties(Constant.APP_PROPERTIES_FILE_PATH);
-		this.savedInputData = Util.loadProperties(Constant.SAVED_INPUT_DATA_PATH);
+		
+		this.isMacOS = Boolean.parseBoolean(this.appProperties.getProperty(Constant.KEY_IS_MAC_OS));
+		
+		if (this.isMacOS) {
+			String homeDir = System.getProperty(this.appProperties.getProperty(Constant.KEY_MAC_OS_HOME_DIR_PROPERTY_NAME));
+
+			String strAppDir = homeDir + File.separator + "GmailOAUTH2Utilities";
+			
+			this.savedInputDataFilePath = strAppDir + File.separator + Constant.SAVED_INPUT_DATA_FILE_PATH;
+			
+			File savedInputDataFile = new File(this.savedInputDataFilePath);
+			
+			if (savedInputDataFile.exists()) {
+				this.savedInputData = Util.loadProperties(this.savedInputDataFilePath);
+			} else {
+				this.savedInputData = Util.loadProperties(Constant.SAVED_INPUT_DATA_FILE_PATH);
+			}
+		} else {
+			this.savedInputDataFilePath = Constant.SAVED_INPUT_DATA_FILE_PATH;
+			this.savedInputData = Util.loadProperties(this.savedInputDataFilePath);
+		}
+		
 
 		this.mRedirectResponseHandler = RedirectResponseHandler.getInstance();
 
@@ -248,7 +291,13 @@ public class GmailOAUTH2UITool extends JFrame implements ListSelectionListener, 
 		}
 
 		try {
-			FileOutputStream fileOutputStream = new FileOutputStream(Constant.SAVED_INPUT_DATA_PATH);
+			File saveInputDataFile = new File(this.savedInputDataFilePath);
+			
+			if(!saveInputDataFile.getParentFile().exists()) {
+				saveInputDataFile.getParentFile().mkdir();
+			}
+			
+			FileOutputStream fileOutputStream = new FileOutputStream(this.savedInputDataFilePath);
 
 			this.savedInputData.store(fileOutputStream, null);
 

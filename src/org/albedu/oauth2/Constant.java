@@ -1,7 +1,7 @@
 package org.albedu.oauth2;
 
 public class Constant {
-	public static final String SAVED_INPUT_DATA_PATH = "config/saved-data.props";
+	public static final String SAVED_INPUT_DATA_FILE_PATH = "config/saved-data.props";
 	public static final String APP_PROPERTIES_FILE_PATH = "config/app-properties.props";
 	public static final String LOG4J_UI_TOOL_CONFIG_FILE_PATH = "config/log4j-ui-tool.properties";
 	public static final String KEY_APP_ICON_PATH = "APP_ICON_PATH";
@@ -30,7 +30,9 @@ public class Constant {
 	public static final String KEY_TEST_SMTP_AUTH_PANEL_ACCESS_TOKEN = "TEST_SMTP_AUTH_PANEL_ACCESS_TOKEN";
 	public static final String KEY_BASE64_TO_TEXT_PANEL_BASE64_STR = "BASE64_TO_TEXT_PANEL_BASE64_STR";
 	public static final String KEY_SETTINGS_PANEL_VERIFICATION_CODE_REDIRECT_URI = "SETTINGS_PANEL_VERIFICATION_CODE_REDIRECT_URI";
-	public static final String URL_PARAM_QUERY_KEY_CODE = "URL_PARAM_QUERY_KEY_CODE";
-	public static final String WEB_FILE_ROOT_DIR = "WEB_FILE_ROOT_DIR";
-	public static final String NUMBER_OF_THREADS_IN_HTTP_THREAD_POOL = "NUMBER_OF_THREADS_IN_HTTP_THREAD_POOL";
+	public static final String KEY_URL_PARAM_QUERY_KEY_CODE = "URL_PARAM_QUERY_KEY_CODE";
+	public static final String KEY_WEB_FILE_ROOT_DIR = "WEB_FILE_ROOT_DIR";
+	public static final String KEY_NUMBER_OF_THREADS_IN_HTTP_THREAD_POOL = "NUMBER_OF_THREADS_IN_HTTP_THREAD_POOL";
+	public static final String KEY_IS_MAC_OS = "IS_MAC_OS";
+	public static final String KEY_MAC_OS_HOME_DIR_PROPERTY_NAME = "MAC_OS_HOME_DIR_PROPERTY_NAME";
 }

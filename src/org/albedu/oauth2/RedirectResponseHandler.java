@@ -33,9 +33,9 @@ public class RedirectResponseHandler implements HttpHandler {
 
 	private RedirectResponseHandler() throws IOException {
 		this.appProperties = Util.loadProperties(Constant.APP_PROPERTIES_FILE_PATH);
-		this.urlParamQueryKeyCode = this.appProperties.getProperty(Constant.URL_PARAM_QUERY_KEY_CODE, "code");
-		this.webFileRootDir = this.appProperties.getProperty(Constant.WEB_FILE_ROOT_DIR, "wwwroot");
-		this.numberOfThreadsInHTTPThreadPool = Integer.parseInt(this.appProperties.getProperty(Constant.NUMBER_OF_THREADS_IN_HTTP_THREAD_POOL, "1"));
+		this.urlParamQueryKeyCode = this.appProperties.getProperty(Constant.KEY_URL_PARAM_QUERY_KEY_CODE, "code");
+		this.webFileRootDir = this.appProperties.getProperty(Constant.KEY_WEB_FILE_ROOT_DIR, "wwwroot");
+		this.numberOfThreadsInHTTPThreadPool = Integer.parseInt(this.appProperties.getProperty(Constant.KEY_NUMBER_OF_THREADS_IN_HTTP_THREAD_POOL, "1"));
 	}
 
 	public static RedirectResponseHandler getInstance() throws IOException {
