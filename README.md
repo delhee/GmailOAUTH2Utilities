@@ -8,13 +8,14 @@ Once you start using the Gmail OAuth2 Utilities, it creates a folder (or directo
 
 ## Uninstallation Guide
 To remove this app, all you need to do is manually delete the files extracted from the zip file you have downloaded. Apart from that, Mac users also need to manually delete "GmailOAUTH2Utilities" folder (and its content) under their home directories, to completely remove this app.
-To learn more about this set of tools, please watch the following playlist of video tutorials. 
 
+## Lear More
+To learn more about this set of tools, please watch the following playlist of video tutorials. 
 
 https://www.youtube.com/watch?v=IV3PN7IejTg&list=PLmq7EQU8fYwYGKWnsnKJgakZLYW1AC8Zd
 
 
-Change logs: 
+## Change logs: 
 
 v1.1.0
 1. Users are allowed to change Redirect URI real time (used to generate OAuth2 Access Token for the first time). 
